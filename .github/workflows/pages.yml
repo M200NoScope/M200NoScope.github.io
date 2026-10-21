@@ -1,4 +1,4 @@
-name: Publish Xeldule blog
+name: Publish M200NoScope blog
 
 on:
   push:
