@@ -1,0 +1,51 @@
+name: Publish Xeldule blog
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout static site inputs
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Verify and unpack audited static files
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum --check site-parts.sha256
+          mkdir public
+          for part in site-part-*.zip; do
+            unzip -q "$part" -d public
+          done
+          (cd public && sha256sum --check ../site-files.sha256)
+          test -f public/index.html
+          test -f public/.nojekyll
+          test "$(find public/posts -name index.html | wc -l)" -eq 9
+          test "$(find public -type f | wc -l)" -eq 468
+      - name: Upload only the public website
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: public
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
